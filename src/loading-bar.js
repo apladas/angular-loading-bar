@@ -148,7 +148,7 @@ angular.module('cfp.loadingBarInterceptor', ['cfp.loadingBar'])
   }]);
 
 
-/**
+  /**
  * Loading Bar
  *
  * This service handles adding and removing the actual element in the DOM.
@@ -160,27 +160,36 @@ angular.module('cfp.loadingBarInterceptor', ['cfp.loadingBar'])
 angular.module('cfp.loadingBar', [])
   .provider('cfpLoadingBar', function() {
 
+    this.includeBlurring = true;
     this.autoIncrement = true;
     this.includeSpinner = true;
     this.includeBar = true;
     this.latencyThreshold = 100;
     this.startSize = 0.02;
     this.parentSelector = 'body';
+    this.loaderParentSelector = 'div#view';
+    this.blurSelector = 'div#view > div#view_content';
+    this.loaderTemplate = '<div class="page-loader"></div>';
     this.spinnerTemplate = '<div id="loading-bar-spinner"><div class="spinner-icon"></div></div>';
     this.loadingBarTemplate = '<div id="loading-bar"><div class="bar"><div class="peg"></div></div></div>';
 
     this.$get = ['$injector', '$document', '$timeout', '$rootScope', function ($injector, $document, $timeout, $rootScope) {
       var $animate;
       var $parentSelector = this.parentSelector,
+        $blurSelector = this.blurSelector,
+        $loaderParentSelector = this.loaderParentSelector,
+        loaderContainer = angular.element(this.loaderTemplate),
         loadingBarContainer = angular.element(this.loadingBarTemplate),
         loadingBar = loadingBarContainer.find('div').eq(0),
-        spinner = angular.element(this.spinnerTemplate);
+        spinner = angular.element(this.spinnerTemplate),
+        blurElement = null;
 
       var incTimeout,
         completeTimeout,
         started = false,
         status = 0;
 
+      var includeBlurring = this.includeBlurring;
       var autoIncrement = this.autoIncrement;
       var includeSpinner = this.includeSpinner;
       var includeBar = this.includeBar;
@@ -207,6 +216,10 @@ angular.module('cfp.loadingBar', [])
           : $document.find($parentSelector)[0]
         ;
 
+        var loaderParentElement = document.querySelector ?
+            document.querySelector($loaderParentSelector) :
+            $document.find($loaderParentSelector)[0];
+
         if (! parent) {
           parent = document.getElementsByTagName('body')[0];
         }
@@ -225,6 +238,10 @@ angular.module('cfp.loadingBar', [])
           $animate.enter(spinner, $parent, loadingBarContainer);
         }
 
+        if (includeBlurring && loaderParentElement) {
+          $animate.enter(loaderContainer, loaderParentElement);
+        }
+
         _set(startSize);
       }
 
@@ -240,6 +257,21 @@ angular.module('cfp.loadingBar', [])
         var pct = (n * 100) + '%';
         loadingBar.css('width', pct);
         status = n;
+
+        if (!blurElement || blurElement.length < 1 || n < 0.1) blurElement = $document.querySelector ?
+            $document.querySelector($blurSelector) :
+            $document.find($blurSelector);
+
+        if (includeBlurring && blurElement) {
+
+          var blurpx = 20 * (1 - n);
+          blurElement.css({
+            'filter': 'blur(' + blurpx + 'px)',
+            '-webkit-filter': 'blur(' + blurpx + 'px)',
+            '-o-filter': 'blur(' + blurpx + 'px)',
+            'opacity': 0.5 + 0.5 * n
+          });
+        }
 
         // increment loadingbar to give the illusion that there is always
         // progress but make sure to cancel the previous timeouts so we don't
@@ -302,6 +334,7 @@ angular.module('cfp.loadingBar', [])
         }
 
         _set(1);
+        $animate.leave(loaderContainer);
         $timeout.cancel(completeTimeout);
 
         // Attempt to aggregate any start/complete calls within 500ms:
@@ -325,7 +358,11 @@ angular.module('cfp.loadingBar', [])
         includeSpinner   : this.includeSpinner,
         latencyThreshold : this.latencyThreshold,
         parentSelector   : this.parentSelector,
-        startSize        : this.startSize
+        startSize        : this.startSize,
+        includeBlurring  : this.includeBlurring,
+        loaderTemplate   : this.loaderTemplate,
+        loaderParentSelector: this.loaderParentSelector,
+        loaderSelector   : this.loaderSelector
       };
 
 
