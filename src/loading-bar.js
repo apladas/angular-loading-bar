@@ -205,7 +205,7 @@ angular.module('cfp.loadingBar', [])
 
         $timeout.cancel(completeTimeout);
 
-        // do not continually broadcast the started event:
+        // do not continually broadcast the started event
         if (started) {
           return;
         }
